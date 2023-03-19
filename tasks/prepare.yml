@@ -24,6 +24,9 @@
   ansible.builtin.package:
     update_cache: true
 
+# TODO
+# detect installed pecl extensions and versions
+
 - name: define dependecies
   set_fact:
     php_pecl_build_dependecies: "{{ php_pecl_defaults_build_dependecies + php_pecl_extensions | dependencies() }}"
