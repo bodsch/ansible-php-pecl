@@ -25,7 +25,6 @@ ArchLinux has removed the PHP 7 packages from their repository!
 
 Tested on
 
-* ArchLinux (**only PHP 8!**)
 * Debian based
     - Debian 10 / 11
     - Ubuntu 20.04
@@ -33,8 +32,48 @@ Tested on
 ## usage
 
 ```yaml
+php_pecl_extensions:
+  - name: APCu
+    version: 5.1.22
+    enabled: true
+  - name: imagick
+    version: 3.7.0
+    dependencies:
+      - libmagickwand-dev
+  - name: memcached
+    dependencies:
+      - libmemcached-dev
+      - libzstd-dev
+      - liblz-dev
+```
+
+| Key            | type     | requiered  | default value | Description                             |
+|:----           | :---     | :----      |:----          | :----                                   |
+| `name`         | `string` | **TRUE**   | `-`           | The Name of the Pecl Extension          |
+| `version`      | `string` | **FALSE**  | `-`           | The Version of the Pecl Extension       |
+| `state`        | `string` | **FALSE**  | `present`     |                                         |
+| `enabled`      | `bool`   | **FALSE**  | `true`        | should be the extension enabled?        |
+| `priority`     | `string` | **FALSE**  | `80`          | priority for the enabled extension      |
+| `dependencies` | `list`   | **FALSE**  | `[]`          | a list with dependencies for the build  |
+
+
+```yaml
+
+php_pecl_extensions:
+  - name: memcached
+    version: 3.2.0
+    state: present
+    enabled: true
+    dependencies:
+      - libmemcached-dev
+      - libzstd-dev
+      - liblz-dev
+  - name: APCu
+    version: 5.1.22
+    state: absent
 
 ```
+
 
 ## Contribution
 
