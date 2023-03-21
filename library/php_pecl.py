@@ -155,22 +155,22 @@ class PhpPecl(object):
 
         result_state = []
 
-        checksum_file = os.path.join(self.cache_directory, "pecl.checksum")
+        # checksum_file = os.path.join(self.cache_directory, "pecl.checksum")
 
-        rc, self.php_extension_dir, err = self.php_information("--extension-dir")
+        rc, self.php_extension_dir, err = self.php_information("extension_dir")
 
         if self.state == "install":
 
-            changed, checksum, old_checksum = self.checksum.validate(
-                checksum_file=checksum_file,
-                data=self.packages
-            )
-
-            if not changed:
-                return dict(
-                    changed = False,
-                    msg = "The pecl configurations has not been changed."
-                )
+            # changed, checksum, old_checksum = self.checksum.validate(
+            #     checksum_file=checksum_file,
+            #     data=self.packages
+            # )
+            #
+            # if not changed:
+            #     return dict(
+            #         changed = False,
+            #         msg = "The pecl configurations has not been changed."
+            #     )
 
             result_state = self.__install()
 
@@ -184,16 +184,37 @@ class PhpPecl(object):
             _changed = (len(changed) > 0)
             _failed = (len(failed) > 0)
 
-            if not _failed:
-                self.checksum.write_checksum(
-                    checksum_file=checksum_file,
-                    checksum=checksum
-                )
+            # if not _failed:
+            #     self.checksum.write_checksum(
+            #         checksum_file=checksum_file,
+            #         checksum=checksum
+            #     )
 
             result = dict(
                 changed = _changed,
                 failed = _failed,
                 result = result_state
+            )
+        elif self.state == "check":
+
+            result_state, packages = self.__check()
+
+            # define changed for the running tasks
+            # migrate a list of dict into dict
+            combined_d = {key: value for d in result_state for key, value in d.items()}
+            # find all changed and define our variable
+            changed = {k: v for k, v in combined_d.items() if isinstance(v, dict) if v.get('changed')}
+            failed = {k: v for k, v in combined_d.items() if isinstance(v, dict) if v.get('failed')}
+            # installed = [k for k, v in combined_d.items() if isinstance(v, dict) if not v.get('installed')]
+
+            _changed = (len(changed) > 0)
+            _failed = (len(failed) > 0)
+
+            result = dict(
+                changed = _changed,
+                failed = _failed,
+                result = result_state,
+                missing = packages
             )
 
         else:
@@ -210,15 +231,24 @@ class PhpPecl(object):
     def php_information(self, command=None):
         """
         """
-        php_config_bin = self.module.get_bin_path('php-config', True)
-
+        php_bin = self.module.get_bin_path('php', True)
         args = []
-        args.append(php_config_bin)
+        args.append(php_bin)
+
+        # php_config_bin = self.module.get_bin_path('php-config', True)
+        # args = []
+        # args.append(php_config_bin)
 
         if command:
-            args.append(command)
+            # args.append(command)
+            args.append("-r")
+            args.append(f"echo ini_get(\"{command}\");")
+
+        # self.module.log(msg=f"  - args '{args}'")
 
         rc, out, err = self.__exec(args)
+
+        # self.module.log(msg=f"  - {rc} - {out} - {err}")
 
         return (rc, out.strip(), err)
 
@@ -307,6 +337,61 @@ class PhpPecl(object):
             result_state.append(res)
 
         return result_state
+
+    def __check(self):
+        """
+        """
+        result_state = []
+
+        pac = self.packages.copy()
+
+        package_name = None
+        for p in self.packages:
+            """
+            """
+            res = {}
+            package_name = p.get("name", None)
+            # package_state = p.get("state", "present")
+
+            # self.module.log(msg=f"- package {package_name} -> {package_state}")
+
+            if package_name:
+                _name, _version = self.pecl_information(package_name)
+                checksum = self.__check_pecl_package(_name)
+
+                # self.module.log(msg=f"  - {_name} {_version} - {checksum}")
+
+                if not _version and not checksum:
+                    res[package_name] = dict(
+                        installed = False,
+                        changed = False,
+                        msg = f"{package_name} is not installed.",
+                    )
+
+                elif not _version and checksum:
+                    res[package_name] = dict(
+                        installed = True,
+                        changed = False,
+                        failed = True,
+                        msg = f"{package_name} is already installed, but not via pear."
+                    )
+
+                    pac.remove(p)
+
+                else:
+                    res[package_name] = dict(
+                        installed = True,
+                        changed = False,
+                        msg = f"{package_name} is already with version {_version} installed."
+                    )
+
+                    pac.remove(p)
+
+            result_state.append(res)
+
+        # self.module.log(msg=f"= {result_state}, {pac}")
+
+        return result_state, pac
 
     def __check_pecl_package(self, package):
         """
@@ -475,7 +560,8 @@ class PhpPecl(object):
                     # rename
                     os.rename(destination, f"{destination}.DIST")
 
-            os.symlink(source, destination)
+            if not os.path.islink(destination):
+                os.symlink(source, destination)
 
     def __exec(self, commands, check_rc=True):
         """
@@ -497,7 +583,7 @@ def main():
     args = dict(
         state=dict(
             type=str,
-            choices=["clear-cache", "install", "list", "list-channels", "list-upgrades", "upgrade"],
+            choices=["check", "clear-cache", "install", "list", "list-channels", "list-upgrades", "upgrade"],
             default="list",
         ),
         packages=dict(
@@ -525,8 +611,8 @@ def main():
     module.log(msg=f"packages   : {packages}")
     module.log(msg=f"php_config : {php_config}")
 
-    if (state == "install") and len(packages) == 0:
-        module.fail_json(msg="install state requires packages")
+    if state in ["install", "check"] and len(packages) == 0:
+        module.fail_json(msg="install or check state requires packages")
 
     api = PhpPecl(module)
     result = api.run()

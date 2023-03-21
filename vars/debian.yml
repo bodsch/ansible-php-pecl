@@ -2,6 +2,5 @@
 
 php_pecl_defaults_build_dependecies:
   - php-dev
-  - php-pear
 
 ...

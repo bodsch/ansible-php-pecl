@@ -7,6 +7,15 @@
 
 - name: install
   ansible.builtin.include_tasks: install.yml
+  when:
+    - php_pecl_build | bool
+  tags:
+    - php_pecl_install
+
+- name: clean up
+  ansible.builtin.include_tasks: cleanup.yml
+  when:
+    - php_pecl_build | bool
   tags:
     - php_pecl_install
 

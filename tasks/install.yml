@@ -1,18 +1,22 @@
 ---
 
+- name: install build dependencies
+  become: true
+  ansible.builtin.package:
+    name: "{{ php_pecl_build_dependecies }}"
+    state: present
+  when:
+    - php_pecl_build_dependecies | default([]) | count > 0
+
 # TODO?
 # use "pecl channel-update pecl.php.net"
 
-# - name: clear pecl cache
-#   php_pecl:
-#     state: "clear-cache"
-#   register: php_pecl_pecl_result
 #
 # - name: d
 #   debug:
 #     msg: "{{ php_pecl_pecl_result }}"
 
-- name: pecl stuff
+- name: install pecl extensions
   php_pecl:
     state: install
     packages: "{{ php_pecl_extensions }}"
@@ -21,7 +25,6 @@
       config_dirs:
         - /etc/php/8.2/cli/conf.d
         - /etc/php/8.2/fpm/conf.d
-
   register: php_pecl_pecl_result
 
 # - name: pecl stuff
