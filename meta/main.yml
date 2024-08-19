@@ -2,7 +2,6 @@
 
 galaxy_info:
   role_name: php_pecl
-  namespace: bodsch
 
   author: Bodo Schulz
   description: ansible role to install and configure php pecl extensions
