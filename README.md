@@ -6,6 +6,7 @@ Ansible role to install php pecl packages on various systems.
 ---
 
 > Further development of this Ansible role has been moved to Collection [bodsch.php](https://github.com/bodsch/ansible-collection-php).
+> 
 > **This repository will therefore no longer be actively maintained.**
 
 ---
